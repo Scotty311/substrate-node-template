@@ -16,8 +16,8 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+	use frame_support::pallet_prelude::{*, ValueQuery, DispatchResult};
+	use frame_system::pallet_prelude::{*, OriginFor};
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -38,6 +38,9 @@ pub mod pallet {
 	// https://docs.substrate.io/main-docs/build/runtime-storage/#declaring-storage-items
 	pub type Something<T> = StorageValue<_, u32>;
 
+	#[pallet::storage]
+	pub type Number<T:Config> = StorageMap<_,Blake2_128Concat, T::AccountId, u32, ValueQuery>;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
@@ -46,6 +49,7 @@ pub mod pallet {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
 		SomethingStored(u32, T::AccountId),
+		NumberStored(u32, T::AccountId),
 	}
 
 	// Errors inform users that something went wrong.
@@ -80,6 +84,20 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1).ref_time())]
+		pub fn put_number(origin: OriginFor<T>, number: u32) -> DispatchResult{
+			let who = ensure_signed(origin)?;
+
+			//update storage
+			<Number<T>>::insert(who.clone(),number);
+
+
+			//Emit an event
+			Self::deposit_event(Event::NumberStored(number, who));
+			Ok(())
+		}
+	
+ 
 		/// An example dispatchable that may throw a custom error.
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
 		pub fn cause_error(origin: OriginFor<T>) -> DispatchResult {
